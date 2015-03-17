@@ -1,0 +1,56 @@
+package com.td;
+
+import java.io.IOException;
+import java.io.OutputStream;
+import java.io.Writer;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.nio.charset.Charset;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpServer;
+
+/*
+ * a simple static http server
+*/
+public class Main {
+
+  public static void main(String[] args) throws Exception {
+	  Writer writer = null;
+	  
+	HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
+    server.createContext("/", new MyHandler());
+    server.setExecutor(null); // creates a default executor
+    server.start();
+  }
+
+  static class MyHandler implements HttpHandler {
+    public void handle(HttpExchange t) throws IOException {
+    	URI uri = t.getRequestURI();
+    	
+    	String response;
+    	
+    	try {
+    		Charset encoding = Charset.forName("UTF-8");
+    		response = readFile(uri.getPath(), encoding);
+    	} catch (IOException ex) {
+    		System.out.println(ex.getMessage());
+    		response = "File not found";
+    	}
+    	
+		t.sendResponseHeaders(200, response.length());
+		OutputStream os = t.getResponseBody();
+		os.write(response.getBytes());
+		os.close();
+    }
+    
+    static String readFile(String path, Charset encoding) throws IOException 
+    {
+    	byte[] encoded = Files.readAllBytes(Paths.get(path));
+    	return new String(encoded, encoding);
+    }
+  }
+}
