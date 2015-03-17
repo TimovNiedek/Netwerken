@@ -41,6 +41,8 @@ public class Main {
 			System.out.println("File type: " + extension);
 			System.out.println("Path: " + pathToFile + '\n');
     	    
+			
+			
 			File file = new File(pathToFile.toString());
 
 			if (file.exists() && file.isFile()) 

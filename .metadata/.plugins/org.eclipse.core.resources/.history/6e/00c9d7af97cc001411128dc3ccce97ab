@@ -41,12 +41,13 @@ public class Main {
 			System.out.println("File type: " + extension);
 			System.out.println("Path: " + pathToFile + '\n');
     	    
+			Headers h = t.getResponseHeaders();
+			h.add("Content-Type", extension);
+			
 			File file = new File(pathToFile.toString());
 
 			if (file.exists() && file.isFile()) 
 			{
-				Headers h = t.getResponseHeaders();
-				h.add("Content-Type", extension);
 				
 				byte [] bytearray = new byte [(int) file.length()];
 				FileInputStream fis = new FileInputStream(file);

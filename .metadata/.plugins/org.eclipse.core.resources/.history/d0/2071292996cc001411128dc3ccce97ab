@@ -36,17 +36,19 @@ public class Main {
 		public void handle(HttpExchange t) throws IOException {
 			URI uri = t.getRequestURI();
 			
+			
+			
 			Path pathToFile = Paths.get(pathToServer + uri);
 			String extension = Files.probeContentType(pathToFile);
-			System.out.println("File type: " + extension);
-			System.out.println("Path: " + pathToFile + '\n');
+			System.out.println("File type: " + extension + "\n");
+			System.out.println("Path: " + pathToFile + "\n");
     	    
+			Headers h = t.getResponseHeaders();
+			h.add("Content-Type", extension);
+			
 			File file = new File(pathToFile.toString());
-
-			if (file.exists() && file.isFile()) 
+			if (file.exists() && !file.isDirectory()) 
 			{
-				Headers h = t.getResponseHeaders();
-				h.add("Content-Type", extension);
 				
 				byte [] bytearray = new byte [(int) file.length()];
 				FileInputStream fis = new FileInputStream(file);
@@ -61,12 +63,19 @@ public class Main {
 				fis.close();
 				bis.close();
 			} else {
-				String response = "<b>File not found<b>";
-				t.sendResponseHeaders(404, response.length());
+				System.out.println("File not found2");
+				String response = "File not found.";
+				
 				OutputStream os = t.getResponseBody();
 				os.write(response.getBytes());
 				os.close();
 			}
+	    }
+	    
+	    static String readFile(String path, Charset encoding) throws IOException 
+	    {
+	    	byte[] encoded = Files.readAllBytes(Paths.get(path));
+	    	return new String(encoded, encoding);
 	    }
 	}
 }
