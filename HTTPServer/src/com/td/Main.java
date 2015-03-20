@@ -7,19 +7,17 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.URI;
-import java.nio.charset.Charset;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.Map;
 
 import com.sun.net.httpserver.Headers;
+import com.sun.net.httpserver.HttpContext;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpServer;
 
-/*
- * a simple static http server
-*/
 public class Main {
 
 	private static String pathToServer;
@@ -27,13 +25,33 @@ public class Main {
 	public static void main(String[] args) throws Exception {
 		pathToServer = System.getProperty("user.dir");
 		HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
-		server.createContext("/", new MyHandler());
+		HttpContext context = server.createContext("/", new MyHandler());
 		server.setExecutor(null); // creates a default executor
+		
+		// Add the parameter filter to the HttpContext
+		context.getFilters().add(new ParameterFilter());
+		
 		server.start();
 	}
 
 	static class MyHandler implements HttpHandler {
 		public void handle(HttpExchange t) throws IOException {
+			Map<String, Object> params = (Map<String, Object>)t.getAttribute("parameters");
+			
+			System.out.println("Handling message...");
+			
+			Headers headers = t.getResponseHeaders();
+			headers.add("Connection", "keep-alive");
+		    headers.add("Keep-Alive", "timeout=14 max=100");
+			
+			Headers requestHeaders = t.getRequestHeaders();
+			System.out.println("Request headers \n" + requestHeaders.keySet());
+			System.out.println(requestHeaders.entrySet());
+			
+			System.out.println("Response headers");
+			System.out.println("Headers: " + headers.keySet());
+			System.out.println(headers.entrySet());
+			
 			URI uri = t.getRequestURI();
 			
 			Path pathToFile = Paths.get(pathToServer + uri);
@@ -61,7 +79,7 @@ public class Main {
 				fis.close();
 				bis.close();
 			} else {
-				String response = "<b>File not found<b>";
+				String response = "<b>404: File not found<b>";
 				t.sendResponseHeaders(404, response.length());
 				OutputStream os = t.getResponseBody();
 				os.write(response.getBytes());

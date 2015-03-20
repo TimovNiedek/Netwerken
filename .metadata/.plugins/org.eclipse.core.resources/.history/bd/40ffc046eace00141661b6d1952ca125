@@ -1,0 +1,80 @@
+package com.td;
+
+import java.io.BufferedInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Map;
+
+import com.sun.net.httpserver.Headers;
+import com.sun.net.httpserver.HttpContext;
+import com.sun.net.httpserver.HttpExchange;
+import com.sun.net.httpserver.HttpHandler;
+import com.sun.net.httpserver.HttpServer;
+
+public class Main {
+
+	private static String pathToServer;
+	
+	public static void main(String[] args) throws Exception {
+		pathToServer = System.getProperty("user.dir");
+		HttpServer server = HttpServer.create(new InetSocketAddress(8000), 0);
+		HttpContext context = server.createContext("/", new MyHandler());
+		server.setExecutor(null); // creates a default executor
+		
+		// Add the parameter filter to the HttpContext
+		context.getFilters().add(new ParameterFilter());
+		
+		server.start();
+	}
+
+	static class MyHandler implements HttpHandler {
+		public void handle(HttpExchange t) throws IOException {
+			Map<String, Object> params = (Map<String, Object>)t.getAttribute("parameters");
+			System.out.println(params);
+			
+			Headers requestHeaders = t.getRequestHeaders();
+			System.out.println("Headers: " + requestHeaders);
+						
+			URI uri = t.getRequestURI();
+			
+			Path pathToFile = Paths.get(pathToServer + uri);
+			String extension = Files.probeContentType(pathToFile);
+			System.out.println("File type: " + extension);
+			System.out.println("Path: " + pathToFile + '\n');
+    	    
+			File file = new File(pathToFile.toString());
+
+			if (file.exists() && file.isFile()) 
+			{
+				Headers h = t.getResponseHeaders();
+				h.add("Content-Type", extension);
+				
+				byte [] bytearray = new byte [(int) file.length()];
+				FileInputStream fis = new FileInputStream(file);
+				BufferedInputStream bis = new BufferedInputStream(fis);
+				bis.read(bytearray, 0, bytearray.length);
+				
+				t.sendResponseHeaders(200, file.length());
+				OutputStream os = t.getResponseBody();
+				os.write(bytearray, 0, bytearray.length);
+				os.close();
+				
+				fis.close();
+				bis.close();
+			} else {
+				String response = "<b>404: File not found<b>";
+				t.sendResponseHeaders(404, response.length());
+				OutputStream os = t.getResponseBody();
+				os.write(response.getBytes());
+				os.close();
+			}
+	    }
+	}
+}
